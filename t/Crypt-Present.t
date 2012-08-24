@@ -8,7 +8,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 9;
+use Test::More tests => 17;
 BEGIN { use_ok('Crypt::Present') };
 
 #########################
@@ -18,16 +18,24 @@ BEGIN { use_ok('Crypt::Present') };
 
 
 
-#     plaintext              key                ciphertext
-# 00000000 00000000  00000000 00000000 0000  5579C138 7B228445
-# 00000000 00000000  FFFFFFFF FFFFFFFF FFFF  E72C46C0 F5945049
-# FFFFFFFF FFFFFFFF  00000000 00000000 0000  A112FFC7 2F68417B
-# FFFFFFFF FFFFFFFF  FFFFFFFF FFFFFFFF FFFF  3333DCD3 213210D2
+#     plaintext              key                             ciphertext
+# 00000000 00000000  00000000 00000000 0000               5579C138 7B228445
+# 00000000 00000000  FFFFFFFF FFFFFFFF FFFF               E72C46C0 F5945049
+# FFFFFFFF FFFFFFFF  00000000 00000000 0000               A112FFC7 2F68417B
+# FFFFFFFF FFFFFFFF  FFFFFFFF FFFFFFFF FFFF               3333DCD3 213210D2
+# 00000000 00000000  00000000 00000000 00000000 00000000  96db702a 2e6900af
+# 00000000 00000000  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  13238c71 0272a5d8
+# FFFFFFFF FFFFFFFF  00000000 00000000 00000000 00000000  3c6019e5 e5edd563
+# FFFFFFFF FFFFFFFF  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  628d9fbd 4218e5b4
 
 my @known = ( { KEY => ("\x00" x 10), PLAIN => ("\x00" x 8), CRYPT => pack('H*','5579C1387B228445') },
               { KEY => ("\x00" x 10), PLAIN => ("\xFF" x 8), CRYPT => pack('H*','A112FFC72F68417B') },
               { KEY => ("\xFF" x 10), PLAIN => ("\x00" x 8), CRYPT => pack('H*','E72C46C0F5945049') },
               { KEY => ("\xFF" x 10), PLAIN => ("\xFF" x 8), CRYPT => pack('H*','3333DCD3213210D2') },
+              { KEY => ("\x00" x 16), PLAIN => ("\x00" x 8), CRYPT => pack('H*','96db702a2e6900af') },
+              { KEY => ("\x00" x 16), PLAIN => ("\xFF" x 8), CRYPT => pack('H*','3c6019e5e5edd563') },
+              { KEY => ("\xFF" x 16), PLAIN => ("\x00" x 8), CRYPT => pack('H*','13238c710272a5d8') },
+              { KEY => ("\xFF" x 16), PLAIN => ("\xFF" x 8), CRYPT => pack('H*','628d9fbd4218e5b4') },
             );
 for my $known ( @known ) {
   my $cipher = new Crypt::Present( $known->{KEY} );
@@ -42,6 +50,6 @@ for my $known ( @known ) {
 }
 
 
-#done_testing( 8 );
+#done_testing( 16 );
 
 1;

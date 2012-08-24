@@ -4,3 +4,6 @@ Revision history for Perl extension Crypt::Present.
 	- original version; created by h2xs 1.23 with options
 		-AX --skip-exporter --use-new-tests -n Crypt::Present
 
+0.02  Fri Aug 24 08:43:43 2012
+	Bugfix: 128 bit keys
+

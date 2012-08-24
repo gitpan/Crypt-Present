@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Crypt-Present
-version:            0.01
+version:            0.02
 abstract:           Perl extension for Ultra-Lightweight PRESENT 64 bit block encryption module
 author:
     - Eduard Gode <eduard@(none)>

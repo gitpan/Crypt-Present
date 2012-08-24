@@ -5,7 +5,7 @@ use warnings;
 
 our @ISA = qw();
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 use Carp;
@@ -16,7 +16,7 @@ my @SBoxByteRev;
 my @V5Bits;
 my @pLVec;
 BEGIN {
-  my @SBox = ( 0xC, 0x5, 0x6, 0xB, 0x9, 0x0, 0xA, 0xD, 0x3, 0xE, 0xF, 0x8, 0x4, 0x7, 0x1, 0x2 ); 
+  my @SBox = ( 0xC, 0x5, 0x6, 0xB, 0x9, 0x0, 0xA, 0xD, 0x3, 0xE, 0xF, 0x8, 0x4, 0x7, 0x1, 0x2 );
   @SBoxBits = map unpack('B4',chr($_<<4)), @SBox;
   @SBoxByte = map { my $h = ( $_ & 0xF0 ) >> 4;
 		    my $l = ( $_ & 0x0F );
@@ -46,7 +46,7 @@ sub usage
 {
   my ($package, $filename, $line, $subr) = caller(1);
   $Carp::CarpLevel = 2;
-  croak "Usage: $subr(@_)"; 
+  croak "Usage: $subr(@_)";
 }
 
 
@@ -71,19 +71,19 @@ my $genRoundKeys = sub ($) {
       $key = substr( $key, 0, 60 ) . $V5Bits[(ord(pack("B5",substr( $key, 60, 5 )))>>3)^$i] . substr( $key, 65, 15 );
       push @roundKeys, substr( pack('B*',$key), 0, 8 );
     }
-    
+
   } elsif ( length($key) == 16 ) {
 
     push @roundKeys, substr( $key, 0, 8 );
     $key = unpack('B*',$key);
     for ( my $i = 1; $i <= 31; $i++ ) {
-      $key = $SBoxBits[pack('B8','0000'.substr( $key, 61, 4 ))] . $SBoxBits[pack('B4','0000'.substr( $key, 65, 4 ))] . substr( $key, 69, 59 ) . substr( $key, 0, 61 );
-      $key = substr( $key, 0, 60 ) . $V5Bits[(ord(pack("B5",substr( $key, 60, 5 )))>>3)^$i] . substr( $key, 65, 15 );
+      $key = $SBoxBits[ord(pack('B8','0000'.substr( $key, 61, 4 )))] . $SBoxBits[ord(pack('B8','0000'.substr( $key, 65, 4 )))] . substr( $key, 69, 59 ) . substr( $key, 0, 61 );
+      $key = substr( $key, 0, 61 ) . $V5Bits[(ord(pack("B5",substr( $key, 61, 5 )))>>3)^$i] . substr( $key, 66, 62 );
       push @roundKeys, substr( pack('B*',$key), 0, 8 );
     }
 
   } else {
-    die "key size must be 80 or 128 but not ".(8 * length $key);
+    die 'key size must be 80 or 128 but not '.(8 * length $key);
   }
 
   return $self->{ROUND_KEYS} = \@roundKeys;
@@ -95,7 +95,7 @@ sub new ($;$) {
   my $class = shift;
   my $key   = shift;
 
-  my $self = bless { KEY => $key }, $class;  
+  my $self = bless { KEY => $key }, $class;
   &$genRoundKeys($self);
   return $self;
 }
@@ -103,23 +103,6 @@ sub new ($;$) {
 
 my $null64 = "\x00" x 8; # 64 bit null value
 
-sub encrypt_ ($$) {
-  my $self = shift;
-  my $b    = shift; # plaintext
-
-  my $roundKeys = $self->{ROUND_KEYS}; $roundKeys = &$genRoundKeys($self) if !defined $roundKeys;
-
-  for ( my $i = 0; $i <= 30; $i++ ) {
-    $b = $b ^ $roundKeys->[$i];
-    $b = join '', map { $SBoxByte[ord($_)]; } split //, $b;
-    my $c = $null64;
-    foreach ( 0 .. 63 ) { vec( $c, $pLVec[$_], 1 ) = 1 if vec( $b, $_, 1 ); }
-    $b = $c;
-  }
-  $b = $b ^ $roundKeys->[31];
-
-  return $b;
-}
 
 sub encrypt ($$) {
   usage("encrypt data[8 bytes]") unless @_ == 2;
@@ -131,8 +114,9 @@ sub encrypt ($$) {
   for ( my $i = 0; $i <= 30; $i++ ) {
     $data = $data ^ $roundKeys->[$i];
     $data = join '', map { $SBoxByte[ord($_)]; } split //, $data;
-    {
+    { # permutate
       my $c = $null64;
+      #foreach ( 0 .. 63 ) { vec( $c, $pLVec[$_], 1 ) = 1 if vec( $b, $_, 1 ); }
       for ( my $j = 64; $j--; ) { vec( $c, $pLVec[$j], 1 ) = 1 if vec( $data, $j, 1 ); }
       $data = $c;
     }
@@ -178,11 +162,11 @@ Crypt::Present - Perl extension for Ultra-Lightweight PRESENT 64 bit block encry
 =head1 SYNOPSIS
 
   use Crypt::Present;
-  my $cipher = new Crypt::Present $key; 
+  my $cipher = new Crypt::Present $key;
   my $ciphertext = $cipher->encrypt($plaintext);
   my $plaintext  = $cipher->decrypt($ciphertext);
 
-  You probably want to use this in conjunction with 
+  You probably want to use this in conjunction with
   a block chaining module like Crypt::CBC.
 
 =head1 DESCRIPTION
@@ -212,7 +196,7 @@ Returns the size (in bytes) of the block cipher.
 
 Crypt::Present::keysize returns [ 10, 16 ] due to its ability
 to use 10 or 16 byte keys.b  More accurately, it shouldn't,
-but it does anyway to play nicely with others. 
+but it does anyway to play nicely with others.
 
 =item new
 
@@ -245,7 +229,7 @@ where $plaintext and $ciphertext must be of C<blocksize()> bytes.
 
         my $key = pack("H20", "0123456789");  # min. 8 bytes
         my $cipher = new Crypt::Present $key;
-        my $ciphertext = $cipher->encrypt("plaintex");  # SEE NOTES 
+        my $ciphertext = $cipher->encrypt("plaintex");  # SEE NOTES
         print unpack("H16", $ciphertext), "\n";
 
 =head1 PLATFORMS
@@ -260,14 +244,12 @@ use this module for Cipher Block Chaining modes.  In fact, if
 you have any intentions of encrypting more than eight bytes of
 data with this, or any other block cipher, you're going to need
 B<some> type of block chaining help.  Crypt::CBC tends to be
-very good at this.  If you're not going to encrypt more than 
+very good at this.  If you're not going to encrypt more than
 eight bytes, your data B<must> be B<exactly> eight bytes long.
 If need be, do your own padding. "\0" as a null byte is perfectly
-valid to use for this. 
+valid to use for this.
 
 =head1 SEE ALSO
-
-Crypt::CBC,
 
 PRESENT: An Ultra-Lightweight Block Cipher
  A. Bogdanov1, L.R. Knudsen2 , G. Leander1 , C. Paar1, A. Poschmann1,
@@ -279,6 +261,9 @@ PRESENT: An Ultra-Lightweight Block Cipher
 leander@rub.de, {abogdanov,cpaar,poschmann}@crypto.rub.de
                    lars@ramkilde.com, chv@mat.dtu.dk
           {matt.robshaw,yannick.seurin}@orange-ftgroup.com
+http://www.emsec.rub.de/media/crypto/attachments/files/2010/04/present_ches2007.pdf
+
+Crypt::CBC
 
 =head1 COPYRIGHT
 
